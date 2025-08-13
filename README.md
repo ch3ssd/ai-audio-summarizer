@@ -1,48 +1,50 @@
-# AI Audio Meeting Summarizer
+# AI Audio Meeting Summarizer (Powered by Google Gemini)
 
-This project is a desktop application that uses local AI models to transcribe and summarize audio from meetings. It is designed with privacy as a priority, ensuring no data ever leaves the user's machine.
+This project is a desktop application that uses the Google Gemini API to transcribe and summarize audio from meetings. It is designed with privacy and security in mind.
 
-## Current Status
-**Work in Progress:** The project scaffold is complete. This includes the directory structure, dependency management (`requirements.txt`), environment configuration (`.env`), and a functional user interface built with Streamlit that uses placeholder logic.
-
-The core AI functionality (live transcription and summarization) is pending the resolution of a local network issue with the Ollama service.
-
-## Planned Features
-- Transcribe audio files (`.mp3`, `.wav`, etc.) using a local instance of OpenAI's Whisper.
-- Generate a concise summary of the transcript using a local LLM hosted by Ollama.
-- Extract a checklist of action items and their assigned owners.
+## Features
+- Analyzes audio files (`.mp3`, `.wav`, etc.) directly using the Gemini 1.5 Flash model.
+- Generates a transcript, a concise summary, and a checklist of action items from a single API call.
 - A simple, easy-to-use interface built with Streamlit.
+- Securely handles API keys and temporary audio files.
 
 ## Setup and Installation
 
 ### Prerequisites
 - Python 3.8+
 - Git
-- [Ollama](https://ollama.com/)
-- [FFmpeg](https://ffmpeg.org/download.html)
+- A Google AI API Key
 
 ### Installation Steps
-1.  Clone the repository:
+1.  **Get an API Key**: Create a free API key at [Google AI Studio](https://makersuite.google.com/app/apikey).
+2.  **Clone the repository**:
     ```bash
     git clone [https://github.com/YOUR_USERNAME/ai-audio-summarizer.git](https://github.com/YOUR_USERNAME/ai-audio-summarizer.git)
     cd ai-audio-summarizer
     ```
-2.  Create and activate a virtual environment:
+3.  **Create and activate a virtual environment**:
     ```bash
-    # For Windows
+    #Create virtual environment:
     python -m venv venv
+    
+    #Activate virtual environment:
+    #For Windows
     .\venv\Scripts\activate
+    
+    # For macOS and Linux
+    source venv/bin/activate
     ```
-3.  Install the required packages:
+4.  **Install the required packages**:
     ```bash
     pip install -r requirements.txt
     ```
-4.  Set up your local environment file by creating a `.env` file and adding the necessary configuration (see `.env.example` if it exists).
+5.  **Create your local environment file**:
+    - Create a new file named `.env` in the project directory.
+    - Add one line to it: `GOOGLE_API_KEY="YOUR_API_KEY_HERE"`
 
 ## How to Run
-1.  Ensure the Ollama service is running.
-2.  Run the Streamlit application from your project's virtual environment:
+1.  Make sure your `(venv)` is active.
+2.  Run the Streamlit application:
     ```bash
     streamlit run app.py
     ```
-    *Note: Currently, this will launch the UI with placeholder functions.*
