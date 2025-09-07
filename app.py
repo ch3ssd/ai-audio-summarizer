@@ -22,35 +22,60 @@ if 'api_configured' not in st.session_state:
         st.stop()
 
 
-# --- Section 2: Core AI Function with Error Handling ---
-def analyze_audio_with_gemini(audio_file_path: str):
+# --- Section 2: Core AI Functions ---
+
+def transcribe_audio_with_gemini(audio_file_path: str) -> str | None:
+    """Step 1: Sends the audio file to Gemini and returns only the transcript."""
     try:
         audio_file = genai.upload_file(path=audio_file_path)
 
-        prompt = """
-        You are an expert meeting assistant. Please analyze this audio file.
-        Perform the following tasks:
-        1. Transcribe the entire audio accurately.
-        2. Provide a concise, bulleted summary of the key decisions and topics.
-        3. Extract all specific action items, including who is assigned to them.
+        while audio_file.state.name == "PROCESSING":
+            time.sleep(2)
+            audio_file = genai.get_file(name=audio_file.name)
 
-        Provide your response as a single, valid JSON object with three keys:
-        "transcript", "summary", and "action_items".
-        """
+        if audio_file.state.name != "ACTIVE":
+            st.error(f"File could not be processed. Final state: {audio_file.state.name}")
+            return None
 
         model = genai.GenerativeModel(model_name="models/gemini-1.5-flash")
-
-        response = model.generate_content([audio_file, prompt])
+        response = model.generate_content(["Please transcribe this audio file.", audio_file],
+                                          request_options={"timeout": 600})
         return response.text
 
     except Exception as e:
-        st.error(f"An error occurred while contacting the Gemini API: {e}")
+        st.error(f"An error occurred during transcription: {e}")
         return None
 
 
-# --- Section 3: Streamlit UI with Secure File Management ---
+def get_summary_from_text(transcript: str) -> str | None:
+    """Step 2: Sends the transcript text to Gemini and returns a JSON summary."""
+    try:
+        # --- PROMPT CHANGE ---
+        # Changed "bulleted summary" to "summary in a single cohesive paragraph"
+        prompt = """
+        You are an expert meeting assistant. Please analyze this transcript.
+        Provide a concise summary in a single cohesive paragraph and extract all action items.
+
+        Provide your response as a single, valid JSON object with two keys:
+        "summary" and "action_items". The "summary" should be a string.
+        """
+
+        generation_config = {"response_mime_type": "application/json"}
+        model = genai.GenerativeModel(
+            model_name="models/gemini-1.5-flash",
+            generation_config=generation_config
+        )
+        response = model.generate_content([prompt, transcript])
+        return response.text
+
+    except Exception as e:
+        st.error(f"An error occurred during summarization: {e}")
+        return None
+
+
+# --- Section 3: Streamlit UI ---
 st.set_page_config(page_title="AI Audio Summarizer", layout="wide")
-st.title("AI Audio Meeting Summarizer (Powered by Google Gemini)")
+st.title("AI Audio Meeting Summarizer")
 st.markdown("Upload an audio file. Your data is processed securely and deleted after analysis.")
 
 uploaded_file = st.file_uploader("Choose an audio file", type=['mp3', 'wav', 'm4a', 'mp4'])
@@ -70,34 +95,37 @@ if uploaded_file is not None:
         st.success(f"File '{uploaded_file.name}' uploaded. Click the button to start analysis.")
 
         if st.button("Analyze Meeting Audio", type="primary"):
-            with st.spinner("The AI is analyzing the audio... This may take a few moments. 🧠"):
-                ai_response = analyze_audio_with_gemini(audio_file_path)
+            with st.spinner("Transcribing audio..."):
+                transcript = transcribe_audio_with_gemini(audio_file_path)
 
-            if ai_response:
-                try:
-                    json_start = ai_response.find('{')
-                    json_end = ai_response.rfind('}') + 1
-                    clean_json_str = ai_response[json_start:json_end]
-                    results = json.loads(clean_json_str)
+            if transcript:
+                st.success("Transcription complete!")
 
-                    st.success("Analysis Complete!")
-                    st.divider()
+                with st.spinner("Generating summary and action items..."):
+                    summary_json = get_summary_from_text(transcript)
 
-                    st.subheader("📝 Meeting Summary")
-                    for point in results.get("summary", []):
-                        st.markdown(f"- {point}")
+                if summary_json:
+                    try:
+                        results = json.loads(summary_json)
+                        st.success("Analysis Complete!")
+                        st.divider()
 
-                    st.subheader("✅ Action Items")
-                    for item in results.get("action_items", []):
-                        st.checkbox(f"**{item.get('owner', 'N/A')}:** {item.get('task', 'No task')}")
+                        # --- DISPLAY CHANGE ---
+                        # Changed the loop to display a single paragraph
+                        st.subheader("Meeting Summary")
+                        summary_paragraph = results.get("summary", "No summary provided.")
+                        st.write(summary_paragraph)
 
-                    with st.expander("Show Full Transcript"):
-                        st.text_area("Transcript:", results.get("transcript", ""), height=250)
+                        st.subheader("Action Items")
+                        for item in results.get("action_items", []):
+                            st.checkbox(f"**{item.get('owner', 'N/A')}:** {item.get('task', 'No task')}")
 
-                except (json.JSONDecodeError, IndexError, AttributeError):
-                    st.error("The AI returned an invalid format. Raw output below:")
-                    st.text(ai_response)
+                        with st.expander("Show Full Transcript"):
+                            st.text_area("Transcript:", transcript, height=250)
+
+                    except json.JSONDecodeError:
+                        st.error("The AI returned an invalid JSON format for the summary. Raw output below:")
+                        st.text(summary_json)
     finally:
-        # Security Best Practice: Always delete the temporary file after processing.
         if audio_file_path and os.path.exists(audio_file_path):
             os.remove(audio_file_path)
