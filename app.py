@@ -5,7 +5,7 @@ from dotenv import load_dotenv
 import google.generativeai as genai
 import time
 
-# --- Section 1: Secure Configuration and Initialization ---
+#Secure Configuration and Initialization
 load_dotenv()
 GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
 
@@ -22,7 +22,7 @@ if 'api_configured' not in st.session_state:
         st.stop()
 
 
-# --- Section 2: Core AI Functions ---
+#Core AI Functions
 
 def transcribe_audio_with_gemini(audio_file_path: str) -> str | None:
     """Step 1: Sends the audio file to Gemini and returns only the transcript."""
@@ -50,8 +50,6 @@ def transcribe_audio_with_gemini(audio_file_path: str) -> str | None:
 def get_summary_from_text(transcript: str) -> str | None:
     """Step 2: Sends the transcript text to Gemini and returns a JSON summary."""
     try:
-        # --- PROMPT CHANGE ---
-        # Changed "bulleted summary" to "summary in a single cohesive paragraph"
         prompt = """
         You are an expert meeting assistant. Please analyze this transcript.
         Provide a concise summary in a single cohesive paragraph and extract all action items.
@@ -73,7 +71,7 @@ def get_summary_from_text(transcript: str) -> str | None:
         return None
 
 
-# --- Section 3: Streamlit UI ---
+#Streamlit UI
 st.set_page_config(page_title="AI Audio Summarizer", layout="wide")
 st.title("AI Audio Meeting Summarizer")
 st.markdown("Upload an audio file. Your data is processed securely and deleted after analysis.")
@@ -110,8 +108,6 @@ if uploaded_file is not None:
                         st.success("Analysis Complete!")
                         st.divider()
 
-                        # --- DISPLAY CHANGE ---
-                        # Changed the loop to display a single paragraph
                         st.subheader("Meeting Summary")
                         summary_paragraph = results.get("summary", "No summary provided.")
                         st.write(summary_paragraph)
